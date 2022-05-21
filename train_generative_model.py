@@ -27,6 +27,7 @@ def run(file, columns, data_types, prompt, epochs, model_name, tokenizer_name, s
         epoch_loss_lm = 0
         epoch_loss_num = 0
         for text, numbers in tqdm(data_loader):
+            text = [prompt + ' ' + t for t in text]
             overall_loss, lm_loss, num_loss = model(text, numbers)
             
             overall_loss.backward()
