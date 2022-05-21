@@ -48,7 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--file', type = str, default='pet_dataset.csv')
     parser.add_argument('--columns', type=str, nargs='+')
     parser.add_argument('--prompt', type=str)
-    parser.add_argument('--data-types', type=str)
+    parser.add_argument('--data-types', type=str, nargs='+')
     parser.add_argument('--epochs', type=int)
     parser.add_argument('--model', type=str, default='gpt2-xl')
     parser.add_argument('--tokenizer', type=str, default='gpt2-xl')
