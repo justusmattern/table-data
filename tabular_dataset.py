@@ -16,12 +16,13 @@ class TableDataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, index):
-        values = [(self.data[name].to_list()[index], self.column_type_dict[name], name) for name in zip(self.column_names)]
-        values = random.sample(values)
+        values = [(self.data[name].to_list()[index], self.column_type_dict[name], name) for name in self.column_names]
+        values = random.sample(values, len(values))
 
         target_string = self.values_to_string(values)
         numbers = [val for val, c_type, c_name in values if c_type == 'num']
-        
+        #print(target_string)
+        #print(numbers)
         return target_string, numbers
 
 
@@ -35,3 +36,4 @@ class TableDataset(torch.utils.data.Dataset):
             substrings.append(col)
         
         full_string = " ||| ".join(substrings)
+        return full_string

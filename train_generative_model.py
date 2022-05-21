@@ -21,12 +21,12 @@ def run(file, columns, data_types, prompt, epochs, model_name, tokenizer_name, s
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    for epoch in tqdm(range(epochs)):
+    for epoch in range(epochs):
         print(f'starting epch {epoch}')
         epoch_loss_overall = 0
         epoch_loss_lm = 0
         epoch_loss_num = 0
-        for text, numbers in data_loader:
+        for text, numbers in tqdm(data_loader):
             overall_loss, lm_loss, num_loss = model(text, numbers)
             
             overall_loss.backward()
@@ -53,9 +53,9 @@ if __name__ == '__main__':
     parser.add_argument('--model', type=str, default='gpt2-xl')
     parser.add_argument('--tokenizer', type=str, default='gpt2-xl')
     parser.add_argument('--model-save-path', type=str, default='table_model')
-    parser.add_argument('--num-loss-weight')
-    parser.add_argument('--learning-rate')
-    parser.add_argument('--batch-size')
+    parser.add_argument('--num-loss-weight', type=float)
+    parser.add_argument('--learning-rate', type=float)
+    parser.add_argument('--batch-size', type=int)
 
 
 
@@ -67,8 +67,8 @@ if __name__ == '__main__':
         data_types = args.data_types,
         prompt = args.prompt,
         epochs = args.epochs,
-        model = args.model,
-        tokenizer = args.tokenizer,
+        model_name = args.model,
+        tokenizer_name = args.tokenizer,
         save_path = args.model_save_path,
         num_loss_weight = args.num_loss_weight,
         learning_rate = args.learning_rate,
