@@ -20,6 +20,8 @@ def run(file, columns, data_types, prompt, epochs, model_name, tokenizer_name, s
     model = TabGPT(model_name, tokenizer_name, num_loss_weight)
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.92)
+
 
     for epoch in range(epochs):
         print(f'starting epch {epoch}')
@@ -36,6 +38,7 @@ def run(file, columns, data_types, prompt, epochs, model_name, tokenizer_name, s
             epoch_loss_overall += overall_loss.item()
             epoch_loss_lm += lm_loss.item()
             epoch_loss_num += num_loss.item()
+        scheduler.step()
         
         torch.save(model.state_dict(), f'{save_path}_epoch_{epoch}')
         print('epoch loss overall', epoch_loss_lm)
