@@ -40,6 +40,41 @@ class TabGPT(nn.Module):
         #print('ovr loss', ovr_loss)
 
         return ovr_loss, lm_loss, num_loss
+
+    
+    def sample(self, prompt, names, types):
+
+        columns = [(n, t) for n, t in zip(names, types)]
+
+        gen_numbers = []
+
+        for name, c_type in columns:
+
+            if c_type == 'text':
+                prompt = prompt + f' ||| {name}:'
+                input_ids = self.gpt2_tokenizer.encode(prompt, return_tensors='pt')
+                generated_samples = self.gpt2.sample(input_ids, max_length=512, top_k=40, top_p=0.95, num_return_sequences=10)
+                for sample in generated_samples:
+                    text = self.gpt2_tokenizer.decode(sample, skip_special_tokens = False)
+                    post_prompt = text.split(prompt[1:])[1]
+                    if ' |||' in post_prompt:
+                        generated_piece = post_prompt.split(' |||')[0]
+                        prompt += generated_piece
+                        break
+            
+            elif c_type == 'num':
+                prompt = prompt + f' ||| {name}: [NUM]'
+                input_ids = self.gpt2_tokenizer(prompt, max_length=1024, truncation=True, return_tensors='pt').input_ids
+                numeric_representation = self.gpt2(input_ids, output_hidden_states=True).hidden_states[-1][:, -1, :]
+                number = self.num_regression(numeric_representation).squeeze()
+                gen_numbers.append(number)
+        
+        prompt = prompt + ' |||'
+        
+        for num in gen_numbers:
+            prompt = prompt.replace('[NUM]', num, 1)
+
+        return prompt
         
 
     def lm_loss(self, model_output, targets, num_indices):
