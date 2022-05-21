@@ -8,7 +8,7 @@ class TabGPT(nn.Module):
     def __init__(self, model_name, tokenizer_name, num_loss_weight):
         super().__init__()
         self.gpt2_tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_name)
-        self.gpt2 = GPT2LMHeadModel.from_pretrained(model_name)
+        self.gpt2 = GPT2LMHeadModel.from_pretrained(model_name, pad_token_id = self.gpt2_tokenizer.eos_token_id)
         self.gpt2.parallelize()
 
         self.gpt2_tokenizer.pad_token = self.gpt2_tokenizer.eos_token
@@ -21,7 +21,7 @@ class TabGPT(nn.Module):
         self.num_token_id = self.gpt2_tokenizer('[NUM]', return_tensors='pt').input_ids.squeeze().item()
 
         self.num_regression = nn.Sequential(
-            nn.Linear(1024, 400),
+            nn.Linear(1280, 400),
             nn.ReLU(),
             nn.Linear(400,1)
         ).to('cuda:3')
@@ -31,7 +31,7 @@ class TabGPT(nn.Module):
         model_output = self.gpt2(tokenized_text, output_hidden_states=True)
         num_indices = torch.eq(tokenized_text, self.num_token_id)
 
-        lm_loss = self.lm_loss(model_output, tokenized_text, num_indices)      
+        lm_loss = self.lm_loss(model_output, tokenized_text, num_indices)
         num_loss = self.numeric_loss(model_output, numbers, num_indices)
 
         ovr_loss = lm_loss + self.num_loss_weight * num_loss.to(f'cuda:{lm_loss.get_device()}')
@@ -52,11 +52,12 @@ class TabGPT(nn.Module):
 
             if c_type == 'text':
                 prompt = prompt + f' ||| {name}:'
-                input_ids = self.gpt2_tokenizer.encode(prompt, return_tensors='pt')
+                input_ids = self.gpt2_tokenizer(prompt, max_length=1024, truncation=True, return_tensors='pt').input_ids.to('cuda:0')
                 generated_samples = self.gpt2.sample(input_ids, max_length=512, top_k=40, top_p=0.95, num_return_sequences=10)
                 for sample in generated_samples:
                     text = self.gpt2_tokenizer.decode(sample, skip_special_tokens = False)
                     post_prompt = text.split(prompt[1:])[1]
+                    print(post_prompt)
                     if ' |||' in post_prompt:
                         generated_piece = post_prompt.split(' |||')[0]
                         prompt += generated_piece
@@ -64,18 +65,25 @@ class TabGPT(nn.Module):
             
             elif c_type == 'num':
                 prompt = prompt + f' ||| {name}: [NUM]'
-                input_ids = self.gpt2_tokenizer(prompt, max_length=1024, truncation=True, return_tensors='pt').input_ids
+                input_ids = self.gpt2_tokenizer(prompt, max_length=1024, truncation=True, return_tensors='pt').input_ids.to('cuda:0')
                 numeric_representation = self.gpt2(input_ids, output_hidden_states=True).hidden_states[-1][:, -1, :]
                 number = self.num_regression(numeric_representation).squeeze()
-                gen_numbers.append(number)
+                gen_numbers.append(number.item())
         
         prompt = prompt + ' |||'
         
         for num in gen_numbers:
-            prompt = prompt.replace('[NUM]', num, 1)
+            prompt = prompt.replace('[NUM]', str(num), 1)
 
         return prompt
         
+    def toy_sample(self, prompt, names, types):
+        input_ids = self.gpt2_tokenizer(prompt + ' ||| Type:', max_length=1024, truncation=True, return_tensors='pt').input_ids.to('cuda:0')
+        generated_samples = self.gpt2.generate(input_ids, max_length=512, top_k=40, top_p=0.95, num_return_sequences=1)
+
+        for sample in generated_samples:
+            text = self.gpt2_tokenizer.decode(sample, skip_special_tokens = False)
+            print(text)
 
     def lm_loss(self, model_output, targets, num_indices):
         logits = model_output.logits.permute(0,2,1)

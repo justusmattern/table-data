@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 
 def run(model_name, prompt, num_generations, column_names, column_types):
-    model = TabGPT('gpt2', 'gpt2', 0)
+    model = TabGPT('gpt2-large', 'gpt2-large', 0)
     model.load_state_dict(torch.load(model_name))
 
     generated = []
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--model-name', type = str)
     parser.add_argument('--prompt', type = str)
-    parser.add_argument('--num-generations', type=str, nargs='+')
+    parser.add_argument('--num-generations', type=int)
     parser.add_argument('--column-names', type=str, nargs='+')
     parser.add_argument('--column-types', type=str, nargs='+')
 
