@@ -9,6 +9,8 @@ class TabGPT(nn.Module):
         super().__init__()
         self.gpt2_tokenizer = GPT2Tokenizer.from_pretrained(tokenizer_name)
         self.gpt2 = GPT2LMHeadModel.from_pretrained(model_name)
+        self.gpt2.parallelize()
+
         self.gpt2_tokenizer.pad_token = self.gpt2_tokenizer.eos_token
         self.lm_loss_fn = nn.CrossEntropyLoss(reduction='mean')
         self.l2_loss = nn.MSELoss()
@@ -25,7 +27,7 @@ class TabGPT(nn.Module):
         )
 
     def forward(self, text_input, numbers):
-        tokenized_text = self.gpt2_tokenizer(text_input, truncation=True, padding=True, max_length=1024, return_tensors='pt').input_ids
+        tokenized_text = self.gpt2_tokenizer(text_input, truncation=True, padding=True, max_length=1024, return_tensors='pt').input_ids.to('cuda:0')
         model_output = self.gpt2(tokenized_text, output_hidden_states=True)
         num_indices = torch.eq(tokenized_text, self.num_token_id)
 
